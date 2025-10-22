@@ -4,10 +4,10 @@ variable "jenkins_key_name" {
 }
 
 variable "vpc_cidr" {
-  default = "10.0.0.0/16"
+  description = "CIDR block for the VPC"
+  default     = "10.0.0.0/16"
 }
 
-# Changed from single CIDR to a list of two subnets
 variable "public_subnet_cidrs" {
   description = "List of public subnet CIDRs in different AZs"
   type        = list(string)
@@ -15,9 +15,11 @@ variable "public_subnet_cidrs" {
 }
 
 variable "instance_type" {
-  default = "t3.micro"
+  description = "EC2 instance type for Jenkins"
+  default     = "t3.micro"
 }
 
 variable "eks_cluster_name" {
-  default = "my-java-app-eks"
+  description = "Name of the EKS cluster"
+  default     = "my-java-app-eks"
 }
