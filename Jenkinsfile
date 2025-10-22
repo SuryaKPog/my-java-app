@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "suryakpmax/my-java-app:${BUILD_NUMBER}"
+        AWS_REGION   = "ap-south-1"
+        EKS_CLUSTER  = "my-java-app-eks"
     }
 
     stages {
@@ -26,10 +28,17 @@ pipeline {
             }
         }
 
+        stage('Configure kubectl') {
+            steps {
+                sh "aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER"
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
-                sh "kubectl apply -f k8s/deployment.yaml"
-                sh "kubectl apply -f k8s/service.yaml"
+                sh "kubectl create namespace dev || true"
+                sh "kubectl apply -f k8s/deployment.yaml -n dev"
+                sh "kubectl apply -f k8s/service.yaml -n dev"
             }
         }
     }
