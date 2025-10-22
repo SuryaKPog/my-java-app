@@ -8,9 +8,10 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/SuryaKPog/my-java-app.git'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/SuryaKPog/my-java-app.git'
             }
         }
 
@@ -20,35 +21,44 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Login to Docker Hub & Push Image') {
             steps {
-                withDockerRegistry([credentialsId: 'docker-hub-creds', url: 'https://index.docker.io/v1/']) {
-                    sh "docker push $DOCKER_IMAGE"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $DOCKER_IMAGE
+                    '''
                 }
             }
         }
 
         stage('Configure kubectl') {
             steps {
-                sh "aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER"
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws']]) {
+                    sh '''
+                        aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+                    '''
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh "kubectl create namespace dev || true"
-                sh "kubectl apply -f k8s/deployment.yaml -n dev"
-                sh "kubectl apply -f k8s/service.yaml -n dev"
+                sh '''
+                    kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+                    kubectl apply -f k8s/deployment.yaml -n dev
+                    kubectl apply -f k8s/service.yaml -n dev
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "Pipeline completed successfully. Image: $DOCKER_IMAGE"
+            echo " Pipeline completed successfully. Image: $DOCKER_IMAGE"
         }
         failure {
-            echo "Pipeline failed. Check logs for details."
+            echo " Pipeline failed. Check logs for details."
         }
     }
 }
