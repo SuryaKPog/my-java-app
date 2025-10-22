@@ -39,7 +39,6 @@ pipeline {
                 withAWS(credentials: 'aws', region: "${AWS_REGION}") {
                     sh '''
                         aws eks update-kubeconfig --name $EKS_CLUSTER
-                        kubectl version --short
                     '''
                 }
             }
