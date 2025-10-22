@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "suryakpmax/my-java-app:${BUILD_NUMBER}" // Docker Hub image with build number
-        AWS_REGION   = "ap-south-1"
-        EKS_CLUSTER  = "my-java-app-eks"
+        DOCKER_IMAGE  = "suryakpmax/my-java-app:${BUILD_NUMBER}" // Docker Hub image with build number
+        AWS_REGION    = "ap-south-1"
+        EKS_CLUSTER   = "my-java-app-eks"
         K8S_NAMESPACE = "dev"
     }
 
@@ -35,12 +35,9 @@ pipeline {
 
         stage('Configure kubectl for EKS') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                // Use AWS Steps Plugin to handle AWS credentials
+                withAWS(credentials: 'aws', region: "${AWS_REGION}") {
                     sh '''
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                        export AWS_DEFAULT_REGION=$AWS_REGION
-
                         aws eks update-kubeconfig --name $EKS_CLUSTER
                         kubectl version --short
                     '''
