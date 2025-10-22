@@ -35,9 +35,14 @@ pipeline {
 
         stage('Configure kubectl for EKS') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws']]) {
+                withCredentials([usernamePassword(credentialsId: 'aws', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     sh '''
-                        aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+                        docker run --rm \
+                          -v $HOME/.kube:/root/.kube \
+                          -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+                          -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+                          -e AWS_DEFAULT_REGION=$AWS_REGION \
+                          amazon/aws-cli eks update-kubeconfig --name $EKS_CLUSTER
                         kubectl version --short
                     '''
                 }
@@ -73,4 +78,3 @@ pipeline {
         }
     }
 }
-
