@@ -2,9 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "suryakpmax/my-java-app:${BUILD_NUMBER}"
+        DOCKER_IMAGE = "suryakpmax/my-java-app:${BUILD_NUMBER}" // Docker Hub image with build number
         AWS_REGION   = "ap-south-1"
         EKS_CLUSTER  = "my-java-app-eks"
+        K8S_NAMESPACE = "dev"
     }
 
     stages {
@@ -32,11 +33,12 @@ pipeline {
             }
         }
 
-        stage('Configure kubectl') {
+        stage('Configure kubectl for EKS') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws']]) {
                     sh '''
                         aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+                        kubectl version --short
                     '''
                 }
             }
@@ -45,9 +47,18 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                    kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-                    kubectl apply -f k8s/deployment.yaml -n dev
-                    kubectl apply -f k8s/service.yaml -n dev
+                    # Create namespace if it doesn't exist
+                    kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+                    # Replace image dynamically in deployment YAML and apply
+                    sed "s|image: .*|image: $DOCKER_IMAGE|g" k8s/deployment.yaml | kubectl apply -n $K8S_NAMESPACE -f -
+
+                    # Apply service
+                    kubectl apply -f k8s/service.yaml -n $K8S_NAMESPACE
+
+                    # Verify pods and services
+                    kubectl get pods -n $K8S_NAMESPACE
+                    kubectl get svc -n $K8S_NAMESPACE
                 '''
             }
         }
@@ -55,10 +66,11 @@ pipeline {
 
     post {
         success {
-            echo " Pipeline completed successfully. Image: $DOCKER_IMAGE"
+            echo "✅ Pipeline completed successfully. Deployed Image: $DOCKER_IMAGE"
         }
         failure {
-            echo " Pipeline failed. Check logs for details."
+            echo "❌ Pipeline failed. Check the logs above for errors."
         }
     }
 }
+
