@@ -37,12 +37,11 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'aws', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     sh '''
-                        docker run --rm \
-                          -v $HOME/.kube:/root/.kube \
-                          -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-                          -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-                          -e AWS_DEFAULT_REGION=$AWS_REGION \
-                          amazon/aws-cli eks update-kubeconfig --name $EKS_CLUSTER
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                        export AWS_DEFAULT_REGION=$AWS_REGION
+
+                        aws eks update-kubeconfig --name $EKS_CLUSTER
                         kubectl version --short
                     '''
                 }
