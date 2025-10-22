@@ -58,10 +58,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Pipeline completed successfully. Deployed Image: $DOCKER_IMAGE"
+            echo "Pipeline completed successfully. Deployed Image: $DOCKER_IMAGE"
         }
         failure {
-            echo "❌ Pipeline failed. Check the logs above for errors."
+            echo "Pipeline failed. Check the logs above for errors."
         }
     }
 }
