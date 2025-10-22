@@ -35,26 +35,23 @@ pipeline {
 
         stage('Configure kubectl & Deploy to EKS') {
             steps {
-                // Wrap everything inside withAWS to ensure kubectl can authenticate with EKS
-                withAWS(credentials: 'aws', region: "${AWS_REGION}") {
-                    sh '''
-                        # Update kubeconfig
-                        aws eks update-kubeconfig --name $EKS_CLUSTER
+                sh '''
+                    # Use instance profile to update kubeconfig
+                    aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
 
-                        # Create namespace if it doesn't exist
-                        kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+                    # Create namespace if it doesn't exist
+                    kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
 
-                        # Replace image dynamically in deployment YAML and apply
-                        sed "s|image: .*|image: $DOCKER_IMAGE|g" k8s/deployment.yaml | kubectl apply -n $K8S_NAMESPACE -f -
+                    # Replace image dynamically in deployment YAML and apply
+                    sed "s|image: .*|image: $DOCKER_IMAGE|g" k8s/deployment.yaml | kubectl apply -n $K8S_NAMESPACE -f -
 
-                        # Apply service
-                        kubectl apply -f k8s/service.yaml -n $K8S_NAMESPACE
+                    # Apply service
+                    kubectl apply -f k8s/service.yaml -n $K8S_NAMESPACE
 
-                        # Verify pods and services
-                        kubectl get pods -n $K8S_NAMESPACE
-                        kubectl get svc -n $K8S_NAMESPACE
-                    '''
-                }
+                    # Verify pods and services
+                    kubectl get pods -n $K8S_NAMESPACE
+                    kubectl get svc -n $K8S_NAMESPACE
+                '''
             }
         }
     }
